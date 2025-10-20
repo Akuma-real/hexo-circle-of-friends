@@ -151,9 +151,18 @@ jobs:
     # needs: [check, test-versions]
     name: build and run core
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply SIMPLE_MODE to fc_settings.yaml
+        run: |
+          echo "Applying SIMPLE_MODE=${{ env.SIMPLE_MODE }} to fc_settings.yaml"
+          sed -i "s/^SIMPLE_MODE: .*/SIMPLE_MODE: ${{ env.SIMPLE_MODE }}/" fc_settings.yaml
       - uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --release
@@ -186,6 +195,8 @@ jobs:
           add: "data.db --force"
           message: "Update data.db"
           default_author: github_actions
+          pull: true
+          pull_strategy: rebase
       - name: simple mode push # 推送极简模式
         if: ${{ env.SIMPLE_MODE == 'true' }}
         uses: EndBug/add-and-commit@v9
@@ -193,6 +204,8 @@ jobs:
           add: "data.json --force"
           message: "Update data.json"
           default_author: github_actions
+          pull: true
+          pull_strategy: rebase
 
   keepalive-workflow:
     name: Keepalive Workflow
